@@ -1,3 +1,7 @@
+# compile kernel or add modules to whatever kernel you have
+
+you can either compile a minimal kernel with the disk and network drives built
+in, or add the kernel modules to the initramfs (in `/lib/modules`)
 
 # compile busybox
 
