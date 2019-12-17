@@ -27,3 +27,9 @@ cp /lib/x86_64-linux-gnu/libnss_dns.so.2 initramfs//lib/x86_64-linux-gnu/libnss_
 use ldd-tree to copy binaries that must be dynamic
 
 # create target image somehow
+
+.?
+
+# dhcp
+
+not working atm - no idea why
