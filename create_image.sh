@@ -20,11 +20,11 @@ function cleanup {
 function create_disk_image_file_and_mount_it {
     DISK=$1
     CHROOT=$2
-    SIZE_IN_MB=3072
-    # FIXME 3072MB
+    SIZE_IN_GB=3
+    # FIXME
 
-    echo + Creating disk at $DISK of size $SIZE_IN_MB
-    dd if=/dev/zero of=$DISK bs=1M count=$SIZE_IN_MB
+    echo + Creating disk at $DISK of size $SIZE_IN_GB GB
+    dd if=/dev/zero of=$DISK bs=1G count=$SIZE_IN_GB
     echo + Partitioning disk
     fdisk $DISK <<EOF >/dev/null
 o
@@ -63,7 +63,7 @@ function create_installation_locally {
     echo + '/dev/sda1 / xfs defaults 0 0' | sudo tee $CHROOT/etc/fstab
     cat <<EOF | sudo tee $CHROOT/opt/iniital_local_setup.sh
 #!/bin/sh
-growpart /dev/sda 2
+growpart /dev/sda 1
 xfs\_growfs /
 rm -- "$0"
 EOF
@@ -92,8 +92,8 @@ function install_grub_on_disk {
     }' | sudo tee $TARGET/boot/grub/grub.cfg
     
     echo + Copying LOCAL kernel and initramfs to target machine
-    cp /boot/initramfs-$(uname -r).img $TARGET/boot/initramfs.igz
-    cp /boot/vmlinuz-$(uname -r) $TARGET/boot/vmlinuz
+    sudo cp /boot/initramfs-$(uname -r).img $TARGET/boot/initramfs.igz
+    sudo cp /boot/vmlinuz-$(uname -r) $TARGET/boot/vmlinuz
 }
 
 PLAINTEXT_PWD='on'
@@ -107,3 +107,5 @@ trap cleanup EXIT
 create_disk_image_file_and_mount_it $IMG $CHROOT
 create_installation_locally $CHROOT
 install_grub_on_disk $IMG $CHROOT
+
+echo "Everything finished successfully"
