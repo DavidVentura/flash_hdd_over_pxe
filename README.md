@@ -3,6 +3,9 @@
 you can either compile a minimal kernel with the disk and network drives built
 in, or add the kernel modules to the initramfs (in `/lib/modules`)
 
+pay attention to nic drivers (hw, vm), fs drivers and dependencies (xfs,
+libcrc32c)
+
 # compile busybox
 
 ```
