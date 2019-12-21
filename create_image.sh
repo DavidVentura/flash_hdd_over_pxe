@@ -20,7 +20,7 @@ function cleanup {
 function create_disk_image_file_and_mount_it {
     DISK=$1
     CHROOT=$2
-    SIZE_IN_GB=3
+    SIZE_IN_GB=1
     # FIXME
 
     echo + Creating disk at $DISK of size $SIZE_IN_GB GB
@@ -51,7 +51,7 @@ function create_installation_locally {
     sudo yum -q --installroot=$CHROOT install -y http://mirror.centos.org/centos/7/os/x86_64/Packages/centos-release-7-7.1908.0.el7.centos.x86_64.rpm
     echo + Running yum install of system utilities
     # kernel not installed ? FIXME
-    sudo yum -q --installroot=$CHROOT install -y yum irqbalance openssh-server rsyslog systemd sudo tar util-linux vim-minimal passwd iproute cloud-utils-growpart
+    sudo yum -q --installroot=$CHROOT install -y yum irqbalance openssh-server rsyslog systemd sudo tar util-linux vim-minimal passwd iproute cloud-utils-growpart xfsprogs
     echo + Setting up password and copying some scripts
     # rsync some files to chroot instead?
 
@@ -65,10 +65,10 @@ function create_installation_locally {
 #!/bin/sh
 echo growing disk and fs if possible
 growpart /dev/sda 1 && xfs_growfs /
-deleting myself
+echo deleting myself
 rm -- "\$0"
-deleting myself from /etc/rc.local
-sed -i '/\$0/d' /etc/rc.local
+echo deleting myself from /etc/rc.local
+sed -i '/initial_local_setup/d' /etc/rc.local
 
 EOF
     echo "/bin/bash /opt/initial_local_setup.sh >/var/log/initial.log 2>&1" | sudo tee -a $CHROOT/etc/rc.local >/dev/null
