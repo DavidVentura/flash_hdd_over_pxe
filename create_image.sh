@@ -9,7 +9,7 @@ function validate_bootstrapping_system {
 }
 
 function cleanup {
-    losetup -l | grep $LOOP_DEV && (
+    losetup -l | grep -q $LOOP_DEV && (
         echo + Unmonting chroot
         sudo umount $CHROOT
         echo + Unmonting loopback devices
@@ -24,9 +24,9 @@ function create_disk_image_file_and_mount_it {
     # FIXME
 
     echo + Creating disk at $DISK of size $SIZE_IN_GB GB
-    dd if=/dev/zero of=$DISK bs=1G count=$SIZE_IN_GB
+    dd if=/dev/zero of=$DISK bs=1G count=$SIZE_IN_GB 2>/dev/null
     echo + Partitioning disk
-    fdisk $DISK <<EOF >/dev/null
+    fdisk $DISK <<EOF 2>/dev/null >&2
 o
 n
 p
@@ -56,18 +56,22 @@ function create_installation_locally {
     # rsync some files to chroot instead?
 
     pass=$(python -c "import crypt; print(crypt.crypt('$PLAINTEXT_PWD', crypt.mksalt(crypt.METHOD_SHA512)))")
-    pwdline=$(echo + root:$pass:17834:0:99999:7:::)
+    pwdline="root:$pass:17834:0:99999:7:::"
     echo + Setting root password
     sudo sed -i "s|^root.*$|$pwdline|" $CHROOT/etc/shadow
 
-    echo + '/dev/sda1 / xfs defaults 0 0' | sudo tee $CHROOT/etc/fstab
-    cat <<EOF | sudo tee $CHROOT/opt/iniital_local_setup.sh
+    echo '/dev/sda1 / xfs defaults 0 0' | sudo tee $CHROOT/etc/fstab >/dev/null
+    cat <<EOF | sudo tee $CHROOT/opt/initial_local_setup.sh >/dev/null
 #!/bin/sh
-growpart /dev/sda 1
-xfs\_growfs /
-rm -- "$0"
+echo growing disk and fs if possible
+growpart /dev/sda 1 && xfs_growfs /
+deleting myself
+rm -- "\$0"
+deleting myself from /etc/rc.local
+sed -i '/\$0/d' /etc/rc.local
+
 EOF
-    echo + "/bin/bash $CHROOT/opt/iniital_local_setup.sh" | sudo tee -a $CHROOT/etc/rc.local
+    echo "/bin/bash /opt/initial_local_setup.sh >/var/log/initial.log 2>&1" | sudo tee -a $CHROOT/etc/rc.local >/dev/null
     sudo chmod +x $CHROOT/etc/rc.local
 }
 
@@ -77,9 +81,9 @@ function install_grub_on_disk {
     echo + Creating grub core image
     grub2-mkimage -O i386-pc -o ./core.img -p '(hd0,msdos1)/boot/grub' biosdisk part_msdos xfs
     echo + Writing MBR to disk
-    dd if=/usr/lib/grub/i386-pc/boot.img of=$DISK bs=446 count=1 conv=notrunc
+    dd if=/usr/lib/grub/i386-pc/boot.img of=$DISK bs=446 count=1 conv=notrunc 2>/dev/null
     echo + Writing grub image to disk
-    dd if=core.img of=$DISK bs=512 seek=1 conv=notrunc # qemu core
+    dd if=core.img of=$DISK bs=512 seek=1 conv=notrunc 2>/dev/null
     echo + Copying grub modules to disk
     sudo mkdir -p $TARGET/boot/grub/i386-pc/
     sudo cp /usr/lib/grub/i386-pc/* $TARGET/boot/grub/i386-pc/
@@ -89,7 +93,7 @@ function install_grub_on_disk {
     menuentry "regular_startup" {
         linux   /boot/vmlinuz quiet root=/dev/sda1
         initrd  /boot/initramfs.igz
-    }' | sudo tee $TARGET/boot/grub/grub.cfg
+    }' | sudo tee $TARGET/boot/grub/grub.cfg >/dev/null
     
     echo + Copying LOCAL kernel and initramfs to target machine
     sudo cp /boot/initramfs-$(uname -r).img $TARGET/boot/initramfs.igz
@@ -108,4 +112,4 @@ create_disk_image_file_and_mount_it $IMG $CHROOT
 create_installation_locally $CHROOT
 install_grub_on_disk $IMG $CHROOT
 
-echo "Everything finished successfully"
+echo "+ Everything finished successfully"
