@@ -51,7 +51,7 @@ function create_installation_locally {
     sudo yum -q --installroot=$CHROOT install -y http://mirror.centos.org/centos/7/os/x86_64/Packages/centos-release-7-7.1908.0.el7.centos.x86_64.rpm
     echo + Running yum install of system utilities
     # kernel not installed ? FIXME
-    sudo yum -q --installroot=$CHROOT install -y yum irqbalance openssh-server rsyslog systemd sudo tar util-linux vim-minimal passwd iproute cloud-utils-growpart xfsprogs
+    sudo yum -q --installroot=$CHROOT install -y yum irqbalance openssh-server rsyslog systemd sudo tar util-linux vim-minimal passwd iproute cloud-utils-growpart xfsprogs iputils
     echo + Setting up password and copying some scripts
     # rsync some files to chroot instead?
 
