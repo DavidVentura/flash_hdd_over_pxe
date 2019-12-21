@@ -13,6 +13,7 @@ echo 0 > /proc/sys/kernel/printk
 
 #Clear the screen
 
+modprobe xfs
 modprobe e1000
 
 #Create device nodes
@@ -53,7 +54,10 @@ else
     route add default gw 192.168.2.1
     echo "nameserver 192.168.2.1" > /etc/resolv.conf
     echo 'Network set up'
-    curl http://david-dotopc.labs:8000/newfs.img --output - | dd of=/dev/sda #bs=1M conv=sync,fsync
+    curl http://david-dotopc.labs:8000/newfs.img --output newfs.img
+    echo 'Downloaded, flashing'
+    dd if=newfs.img of=/dev/sda bs=1M conv=notrunc
+    echo 'Flashed, syncing'
     sync
     echo 'Done flashing disk..'
     partprobe /dev/sda # kernel is informed of new partition existing
