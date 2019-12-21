@@ -3,7 +3,9 @@
 set -e
 function validate_bootstrapping_system {
     echo + Validating bootstrapping system
-    command -v python >/dev/null || (echo + python not available! && exit 1)
+    command -v python >/dev/null || (echo "+ python not available!" && exit 1)
+    command -v grub2-mkimage >/dev/null || (echo "+ grub2-mkimage not available!" && exit 1)
+    [ -d /usr/lib/grub/i386-pc/ ] || (echo "+ /usr/lib/grub/i386-pc/ does not exist" && exit 1)
 }
 
 function cleanup {
@@ -43,7 +45,7 @@ EOF
 
 function create_installation_locally {
     CHROOT=$1
-    mkdir -p $CHROOT
+    [ -d $CHROOT ] || (echo $CHROOT does not exist! && exit 1)
     # two steps as the first one populates repos, etc
     echo + Running system bootstrap in chroot
     sudo yum -q --installroot=$CHROOT install -y http://mirror.centos.org/centos/7/os/x86_64/Packages/centos-release-7-7.1908.0.el7.centos.x86_64.rpm
@@ -65,22 +67,22 @@ growpart /dev/sda 2
 xfs\_growfs /
 rm -- "$0"
 EOF
-    echo + "/bin/bash $CHROOT/opt/iniital_local_setup.sh" >> $CHROOT/etc/rc.local
-    chmod +x $CHROOT/etc/rc.local
+    echo + "/bin/bash $CHROOT/opt/iniital_local_setup.sh" | sudo tee -a $CHROOT/etc/rc.local
+    sudo chmod +x $CHROOT/etc/rc.local
 }
 
 function install_grub_on_disk {
     DISK=$1
     TARGET=$2
     echo + Creating grub core image
-    grub-mkimage -O i386-pc -o ./core.img -p '(hd0,msdos1)/boot/grub' biosdisk part_msdos xfs
+    grub2-mkimage -O i386-pc -o ./core.img -p '(hd0,msdos1)/boot/grub' biosdisk part_msdos xfs
     echo + Writing MBR to disk
     dd if=/usr/lib/grub/i386-pc/boot.img of=$DISK bs=446 count=1 conv=notrunc
     echo + Writing grub image to disk
     dd if=core.img of=$DISK bs=512 seek=1 conv=notrunc # qemu core
     echo + Copying grub modules to disk
-    mkdir -p $TARGET/boot/grub/i386-pc/
-    cp /usr/lib/grub/i386-pc/* $TARGET/boot/grub/i386-pc/
+    sudo mkdir -p $TARGET/boot/grub/i386-pc/
+    sudo cp /usr/lib/grub/i386-pc/* $TARGET/boot/grub/i386-pc/
     echo + Writing grub config to target FS
     echo 'set timeout=5
     
@@ -90,7 +92,7 @@ function install_grub_on_disk {
     }' | sudo tee $TARGET/boot/grub/grub.cfg
     
     echo + Copying LOCAL kernel and initramfs to target machine
-    cp /boot/initramfs-$(uname-r).img $TARGET/boot/initramfs.igz
+    cp /boot/initramfs-$(uname -r).img $TARGET/boot/initramfs.igz
     cp /boot/vmlinuz-$(uname -r) $TARGET/boot/vmlinuz
 }
 
